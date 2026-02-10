@@ -168,7 +168,7 @@ async def get_stats():
         db_client.index = db_client.client.get_index(name=db_client.index_name)
         info = db_client.index.describe()
 
-        print(f"DEBUG: Live Count from DB: {info.get('count')}")
+        # print(f"DEBUG: Live Count from DB: {info.get('count')}")
         
         return {
             "total_documents": info.get("count", 0),

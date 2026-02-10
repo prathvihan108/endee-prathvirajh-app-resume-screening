@@ -4,6 +4,23 @@ This project is a high-performance resume screening tool built during my interns
 
 ---
 
+<div align="center">
+  <h3>🎥 Brief Demo</h3>
+  <video 
+    src="https://github.com/user-attachments/assets/2054a014-49a3-415e-8369-d3d7b1a5f447" 
+    poster="https://github.com/user-attachments/assets/76e640b0-342b-4cfb-8e21-0a8400681880" 
+    width="100%" 
+    style="max-width: 600px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" 
+    controls 
+    muted>
+    <p>Your browser does not support HTML5 video.</p>
+  </video>
+  <br />
+  <p><em>Semantic Search & Batch Ingestion powered by Endee Engine</em></p>
+</div>
+
+---
+
 ## 🚀 Overview
 
 **Resume-Screening AI** is a full-stack, vector-native recruitment platform designed to solve a fundamental problem in modern talent acquisition:
