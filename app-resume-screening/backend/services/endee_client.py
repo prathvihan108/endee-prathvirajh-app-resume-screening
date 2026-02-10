@@ -9,6 +9,7 @@ class EndeeClient:
         # Connects to your Docker container at localhost:8080
         self.client = Endee()
         self.index_name = "resumes"
+        self.index = self.client.get_index("resumes")
 
     def initialize_collection(self):
         """Official production method to check and create indices."""

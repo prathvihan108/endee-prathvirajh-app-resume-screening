@@ -1,9 +1,10 @@
 import io
 import os
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 
 from .services.endee_client import EndeeClient
+from endee import Precision
 from .core.parser import ResumeParser
 from .core.embedder import OnlineEmbedder
 from typing import List
@@ -13,6 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette import status
 import re
 import io
+
 
 load_dotenv()
 
@@ -44,20 +46,6 @@ async def startup_event():
 @app.get("/")
 def read_root():
     return {"status": "Backend is running"}
-
-@app.get("/test-connection")
-def test_connection():
-    is_alive = db_client.check_health()
-    if is_alive:
-        return {
-            "database_connection": "Success",
-            "message": "Connected to Endee Engine on port 8080"
-        }
-    return {
-        "database_connection": "Failed",
-        "message": "Cannot reach the Docker engine. Is 'docker compose up' running?"
-    }
-
 
 # multiple files upload and process
 
@@ -101,7 +89,7 @@ async def upload_batch(files: List[UploadFile] = File(...)):
                 filename=file.filename,
                 vector=vector,
                 metadata={
-                    "filename": file.filename, # Essential for the UI to display the name
+                    "filename": file.filename, 
                     "skills": structured_data["skills"],
                     "experience_text": structured_data["experience"],
                     "detected_location": detected_city,
@@ -119,7 +107,7 @@ async def upload_batch(files: List[UploadFile] = File(...)):
             print(f"Error processing {file.filename}: {e}")
             report.append({"file": file.filename, "status": f"Error: {str(e)}"})
             
-    # Return an explicit JSONResponse with 200 OK
+    
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
@@ -135,7 +123,7 @@ async def search_resumes(query: str, top_k: int = 5):
     # 2. Get results from SDK
     results = db_client.search_resumes(query_vector, top_k=top_k)
     
-    # 3. Format exactly as the docs suggest
+   
     formatted_results = []
     for item in results:
         formatted_results.append({
@@ -147,9 +135,66 @@ async def search_resumes(query: str, top_k: int = 5):
         
     return {"results": formatted_results}
 
+#To reset the DB
 
 
+@app.delete("/reset")
+async def reset_database():
+    try:
+      
+        db_client.client.delete_index("resumes")
+       
+     
+        db_client.client.create_index(
+            name="resumes",
+            dimension=384,
+            space_type="cosine",
+            precision=Precision.INT8D 
+        ) 
+        
+      
+        db_client.initialize_collection()
+        
+        return {"status": "success", "message": "Index cleared and recreated"}
+    except Exception as e:
+        print(f"Reset Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+#Db vector count
+@app.get("/stats")
+async def get_stats():
+    try:
+        
+        info = db_client.index.describe()
+        print(info)
+        
+        return {
+            "total_documents": info.get("count", 0),
+            "dimension": info.get("dimension", 384),
+            "status": "connected"
+        }
+    except Exception as e:
+        # If the index doesn't exist yet, we return 0 rather than failing
+        print(f"Stats error: {e}")
+        return {
+            "total_documents": 0, 
+            "status": "initializing",
+            "error": str(e)
+        }
 ### Testing apis:-
+
+@app.get("/test-connection")
+def test_connection():
+    is_alive = db_client.check_health()
+    if is_alive:
+        return {
+            "database_connection": "Success",
+            "message": "Connected to Endee Engine on port 8080"
+        }
+    return {
+        "database_connection": "Failed",
+        "message": "Cannot reach the Docker engine. Is 'docker compose up' running?"
+    }
 
 @app.post("/parse")
 async def parse_resume(file: UploadFile = File(...)):
@@ -192,12 +237,3 @@ async def process_and_embed(file: UploadFile = File(...)):
     }
 
 
-
-@app.get("/db-stats")
-async def get_db_stats():
-    # Asks Endee-09 how many vectors are in the 'resumes' collection
-    url = "http://localhost:8080/collections/resumes"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
-    return {"error": "Could not connect to Endee engine"}
